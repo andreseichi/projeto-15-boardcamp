@@ -26,6 +26,28 @@ export async function getCustomers(req, res) {
   }
 }
 
+export async function getCustomerById(req, res) {
+  const { id } = req.params;
+
+  try {
+    const { rows: customer } = await connection.query(
+      'SELECT * FROM customers WHERE id = $1',
+      [id]
+    );
+
+    if (!customer.length) {
+      return res.status(404).json({
+        message: 'Nenhum cliente encontrado',
+      });
+    }
+
+    return res.send(customer);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(error);
+  }
+}
+
 export async function createCustomer(req, res) {
   try {
     const body = req.body;
