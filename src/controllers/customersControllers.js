@@ -1,4 +1,5 @@
 import { connection } from '../databases/postgres.js';
+import { createCustomerSchema } from '../schemas/createCustomer.js';
 
 export async function getCustomers(req, res) {
   const { cpf } = req.query;
@@ -25,12 +26,12 @@ export async function getCustomers(req, res) {
   }
 }
 
-export async function createGames(req, res) {
+export async function createCustomer(req, res) {
   try {
     const body = req.body;
-    const { name, image, stockTotal, categoryId, pricePerDay } = body;
+    const { name, phone, cpf, birthday } = body;
 
-    const { error } = createGameSchema.validate(body);
+    const { error } = createCustomerSchema.validate(body);
     if (error) {
       const errorsMessageArray = error.details.map((error) => error.message);
 
@@ -38,18 +39,17 @@ export async function createGames(req, res) {
       return res.sendStatus(400);
     }
 
-    const { rows } = await connection.query(
-      'SELECT * FROM games WHERE name = $1',
-      [name]
+    const { rows: customers } = await connection.query(
+      'SELECT * FROM customers WHERE cpf = $1',
+      [cpf]
     );
-    if (rows.length) {
+    if (customers.length) {
       return res.sendStatus(409);
     }
 
     await connection.query(
-      `INSERT INTO games (name, image, "stockTotal", "categoryId", 
-      "pricePerDay") VALUES ($1, $2, $3, $4, $5)`,
-      [name, image, stockTotal, categoryId, pricePerDay]
+      `INSERT INTO customers (name, phone, cpf, birthday) VALUES ($1, $2, $3, $4)`,
+      [name, phone, cpf, birthday]
     );
 
     return res.sendStatus(201);
