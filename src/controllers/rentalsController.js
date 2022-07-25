@@ -132,6 +132,49 @@ export async function createRental(req, res) {
   }
 }
 
+export async function returnRental(req, res) {
+  try {
+    const { id } = req.params;
+
+    const { rows: rental } = await connection.query(
+      'SELECT * FROM rentals WHERE id = $1',
+      [id]
+    );
+    if (!rental.length) {
+      return res.sendStatus(404);
+    }
+    if (rental[0].returnDate) {
+      return res.sendStatus(400);
+    }
+
+    const { rentDate, daysRented, originalPrice } = rental[0];
+    const today = new Date();
+    const rentDateExpectedReturn = new Date(rentDate);
+    rentDateExpectedReturn.setDate(
+      rentDateExpectedReturn.getDate() + daysRented
+    );
+    const isReturnDelayed = rentDateExpectedReturn < today;
+    const delayAmount = isReturnDelayed
+      ? Math.floor((today - rentDateExpectedReturn) / 86400000)
+      : 0;
+
+    let delayFee = null;
+    if (delayAmount > 0) {
+      delayFee = delayAmount * originalPrice;
+    }
+
+    await connection.query(
+      `UPDATE rentals SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3`,
+      [today, delayFee, id]
+    );
+
+    return res.sendStatus(200);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(error);
+  }
+}
+
 export async function deleteRental(req, res) {
   try {
     const { id } = req.params;
