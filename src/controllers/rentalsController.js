@@ -64,3 +64,28 @@ export async function createRental(req, res) {
     return res.status(500).send(error);
   }
 }
+
+export async function deleteRental(req, res) {
+  try {
+    const { id } = req.params;
+
+    const { rows: rentals } = await connection.query(
+      'SELECT * FROM rentals WHERE id = $1',
+      [id]
+    );
+    if (!rentals.length) {
+      return res.sendStatus(404);
+    }
+
+    if (rentals[0].returnDate) {
+      return res.sendStatus(400);
+    }
+
+    await connection.query('DELETE FROM rentals WHERE id = $1', [id]);
+
+    return res.sendStatus(200);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(error);
+  }
+}
