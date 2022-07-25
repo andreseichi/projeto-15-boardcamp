@@ -1,6 +1,73 @@
 import { connection } from '../databases/postgres.js';
 import { createRentalSchema } from '../schemas/createRental.js';
 
+export async function getRentals(req, res) {
+  const { customerId, gameId } = req.query;
+  const rentalsRows = [];
+
+  try {
+    const query = `SELECT rentals.*, customers.name AS "customerName",
+      games.name as "gameName", games."categoryId", 
+      categories.name AS "categoryName"
+      FROM rentals
+      JOIN games ON rentals."gameId" = games.id
+      JOIN categories ON games."categoryId" = categories.id
+      JOIN customers ON rentals."customerId" = customers.id
+    `;
+
+    if (customerId) {
+      const { rows: rentals } = await connection.query(
+        `${query} WHERE rentals."customerId" = $1`,
+        [customerId]
+      );
+
+      rentalsRows.push(...rentals);
+    } else {
+      if (gameId) {
+        const { rows: rentals } = await connection.query(
+          `${query} WHERE rentals."gameId" = $1`,
+          [gameId]
+        );
+
+        rentalsRows.push(...rentals);
+      } else {
+        const { rows: rentals } = await connection.query(`${query}`);
+        rentalsRows.push(...rentals);
+      }
+    }
+
+    const rentalsArray = [];
+
+    rentalsRows.map((rental) => {
+      rentalsArray.push({
+        id: rental.id,
+        customerId: rental.customerId,
+        gameId: rental.gameId,
+        rentDate: rental.rentDate,
+        daysRented: rental.daysRented,
+        returnDate: rental.returnDate,
+        originalPrice: rental.originalPrice,
+        delayFee: rental.delayFee,
+        customer: {
+          id: rental.customerId,
+          name: rental.customerName,
+        },
+        game: {
+          id: rental.gameId,
+          name: rental.gameName,
+          categoryId: rental.categoryId,
+          categoryName: rental.categoryName,
+        },
+      });
+    });
+
+    return res.json(rentalsArray);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(error);
+  }
+}
+
 export async function createRental(req, res) {
   try {
     const body = req.body;
@@ -35,7 +102,7 @@ export async function createRental(req, res) {
       'SELECT * FROM rentals WHERE "gameId" = $1',
       [gameId]
     );
-    if (rentals.length >= stockTotal) {
+    if (rentals.length > stockTotal) {
       return res.sendStatus(400);
     }
 
