@@ -144,7 +144,7 @@ export async function deleteRental(req, res) {
       return res.sendStatus(404);
     }
 
-    if (rentals[0].returnDate) {
+    if (!rentals[0].returnDate) {
       return res.sendStatus(400);
     }
 
